@@ -1,0 +1,12 @@
+'!TITLE "Robot program"
+
+Sub Main
+	TakeArm Keep = 0
+	changework 1
+	changetool 0
+	motor on
+	move L, @p p[130]
+	move l, @0 p[131]
+	move c, p[134], @p p[132]
+	move l, @0 p[135]
+End Sub

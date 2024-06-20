@@ -1,0 +1,48 @@
+SM:project.map:'link map'
+MV:3.2:'compiler version'
+TC:0:'Trace Code'
+SA:'allocation map'
+LM:1:pro1.ric:0000:1000-1075:'link module'
+ #  0: 0006, 1, 1058, PRO1+CURRENT_P_VALUES,     0,     0,     0
+ #  1: 0006, 1, 1057, PRO1+CURRENTPOS,     0,     0,     0
+ #  2: 0002, 1, 104c, PRO1+ERRORCODE,     0,     0,     0
+ #  3: 0102, 1, 104a, PRO1+IIA,     7,     0,     0
+ #  4: 0002, 1, 1049, PRO1+XX,     0,     0,     0
+ #  5: 0002, 1, 1048, PRO1+II,     0,     0,     0
+ #  6: 0002, 1, 1047, PRO1+BEST_FIG,     0,     0,     0
+ #  7: 0004, 1, 1046, PRO1+BEST_DIST,     0,     0,     0
+ #  8: 0004, 1, 1045, PRO1+JDIST,     0,     0,     0
+ #  9: 0002, 1, 1036, PRO1+COUNT,     0,     0,     0
+ # 10: 007f, 1, 1000, PRO1
+LM:2:motioncomp.ric:0076:1076-10ba:'link module'
+ # 11: 0003, 1, 10b6, MOTIONCOMP+VER_NUM,     0,     0,     0
+ # 12: 0002, 1, 10b5, MOTIONCOMP+B_PAT,     0,     0,     0
+ # 13: 0002, 1, 10b4, MOTIONCOMP+RBT_JPAT2,     0,     0,     0
+ # 14: 0002, 1, 10b3, MOTIONCOMP+RBT_JOINT2,     0,     0,     0
+ # 15: 0002, 1, 10b2, MOTIONCOMP+TARGETJ,     0,     0,     0
+ # 16: 0002, 1, 10b1, MOTIONCOMP+JNT,     0,     0,     0
+ # 17: 0002, 1, 10b0, MOTIONCOMP+CMD,     0,     0,     0
+ # 18: 0002, 1, 10af, MOTIONCOMP+RSEL,     0,     0,     0
+ # 19: 0002, 1, 10ae, MOTIONCOMP+ADD_JPAT,     0,     0,     0
+ # 20: 0002, 1, 10ad, MOTIONCOMP+JPAT,     0,     0,     0
+ # 21: 0016, 1, 10ac, MOTIONCOMP#1,     0,     0,     0
+ # 22: 0002, 1, 10ac, MOTIONCOMP+CMPFLAG,     0,     0,     0
+ # 23: 007f, 1, 1076, MOTIONCOMP
+LM:3:setcollisionjnt.ric:00bb:10bb-10f7:'link module'
+ # 24: 0002, 1, 10f5, SETCOLLISIONJNT+JTN,     0,     0,     0
+ # 25: 0002, 1, 10f4, SETCOLLISIONJNT+COLJPAT,     0,     0,     0
+ # 26: 0002, 1, 10f3, SETCOLLISIONJNT+BPAT,     0,     0,     0
+ # 27: 0002, 1, 10f2, SETCOLLISIONJNT+PRCCTRL,     0,     0,     0
+ # 28: 0016, 1, 10f1, SETCOLLISIONJNT#1,     0,     0,     0
+ # 29: 0002, 1, 10f1, SETCOLLISIONJNT+JNT,     0,     0,     0
+ # 30: 007f, 1, 10bb, SETCOLLISIONJNT
+LM:4:resetcollisionjnt.ric:00f8:10f8-1133:'link module'
+ # 31: 0002, 1, 1131, RESETCOLLISIONJNT+JTN,     0,     0,     0
+ # 32: 0002, 1, 1130, RESETCOLLISIONJNT+COLJPAT,     0,     0,     0
+ # 33: 0002, 1, 112f, RESETCOLLISIONJNT+BPAT,     0,     0,     0
+ # 34: 0016, 1, 112e, RESETCOLLISIONJNT#1,     0,     0,     0
+ # 35: 0002, 1, 112e, RESETCOLLISIONJNT+JNT,     0,     0,     0
+ # 36: 007f, 1, 10f8, RESETCOLLISIONJNT
+FA:0131:'free allocation'
+EA:'end of allocation map'
+EM:'end of link map'

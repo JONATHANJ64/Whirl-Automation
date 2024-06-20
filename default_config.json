@@ -1,0 +1,307 @@
+{
+  "station1": {
+    "robot": "192.168.100.7",
+    "robot_type": "rc8",
+    "robot_speed": 10,
+    "wago": "192.168.100.2",
+    "cognex": "192.168.100.12",
+    "barcode_2": "192.168.100.18",
+    "barcode_3": "192.168.100.19",
+    "feeders": {
+      "cross_gear": "192.168.100.41",
+      "pinion": "192.168.100.43",
+      "crank_handle": "192.168.100.42",
+      "ring_gear": "192.168.100.44"
+    },
+    "io": {
+      "lift_locate_extended_3": 1,
+      "lift_locate_retracted_3": 3,
+      "lift_locate_main_3": 5,
+      "lift_locate_extended_2": 7,
+      "lift_locate_retracted_2": 9,
+      "lift_locate_pre_2": 11,
+      "lift_locate_main_2": 13,
+      "grease_slide_retracted": 2,
+      "grease_slide_extended": 4,
+      "reservoir_full": 16,
+      "reservoir_empty": 15,
+      "electrovalve_to_alemite_ram": 1
+    },
+    "valve": {
+      "slave_id": 1,
+      "lift_locate_up_3": 1,
+      "lift_locate_main_3": 3,
+      "lift_locate_up_2": 4,
+      "lift_locate_pre_2": 5,
+      "lift_locate_main_2": 6,
+      "grease_dispenser_retract_ejector_piston": 2,
+      "grease_dispenser_lower_grease_block": 7,
+      "grease_spool_valve": 8,
+      "grease_canister_back_pressure": 9,
+      "grease_dispenser_advance_ejector_piston": 10,
+      "whirl_rotator": 14
+    },
+    "grease_dispenser": {
+      "reservoir_back_pressure_delay": 1,
+      "shot_chamber_filling_delay": 0.5,
+      "depressurize_delay": 2,
+      "open_spool_valve_delay": 0.5,
+      "inject_delay": 0.5,
+      "grease_reservoir_timeout": 5,
+      "sensor_timeout": 5
+    }
+  },
+  "station2": {
+    "robot": "192.168.100.8",
+    "robot_type": "rc7",
+    "robot_speed": 10,
+    "wago": "192.168.100.3",
+    "cognex": "192.168.100.13",
+    "barcode_4": "192.168.100.20",
+    "feeders": {
+      "upper_housing": "192.168.100.53",
+      "crank_arm": "192.168.100.45",
+      "rotor": "192.168.100.46"
+    },
+    "io": {
+      "lift_locate_extended_4": 1,
+      "lift_locate_retracted_4": 3,
+      "lift_locate_pre_4": 5,
+      "lift_locate_main_4": 7
+    },
+    "valve": {
+      "slave_id": 2,
+      "lift_locate_up_4": 1,
+      "lift_locate_pre_4": 2,
+      "lift_locate_main_4": 3
+    }
+  },
+  "station3": {
+    "robot": "192.168.100.9",
+    "robot_type": "rc8",
+    "robot_speed": 10,
+    "wago": "192.168.100.4",
+    "cognex": "192.168.100.14",
+    "barcode_5": "192.168.100.21",
+    "barcode_7": "192.168.100.23",
+    "feeders": {
+      "left_handle": "192.168.100.51",
+      "dial": "192.168.100.52",
+      "support_arm": "192.168.100.48",
+      "trigger": "192.168.100.47"
+    },
+    "test": {
+      "duration": 5,
+      "startup_delay": 2,
+      "low_pass": 5,
+      "high_pass": 20
+    },
+    "io": {
+      "lift_locate_extended_5": 1,
+      "lift_locate_retracted_5": 3,
+      "lift_locate_pre_5": 5,
+      "lift_locate_main_5": 7,
+      "lift_locate_extended_7": 2,
+      "lift_locate_retracted_7": 4,
+      "lift_locate_pre_7": 6,
+      "lift_locate_main_7": 8,
+      "rotary_test": 9,
+      "part_flip_open": 11,
+      "part_flip_closed": 13,
+      "laser_sensor_left_handle":  15,
+      "laser_sensor_dial":  16
+    },
+    "valve": {
+      "slave_id": 3,
+      "lift_locate_up_5": 1,
+      "lift_locate_pre_5": 2,
+      "lift_locate_main_5": 3,
+      "lift_locate_up_7": 4,
+      "lift_locate_pre_7": 5,
+      "lift_locate_main_7": 6,
+      "lift_locate_final_assembly_test_air_7": 7,
+      "flip_nest_gripper_open": 8
+    }
+  },
+  "station4": {
+    "robot": "192.168.100.10",
+    "robot_type": "rc7",
+    "robot_speed": 10,
+    "wago": "192.168.100.5",
+    "cognex": "192.168.100.15",
+    "barcode_6": "192.168.100.22",
+    "feeders": {
+      "right_handle": "192.168.100.49",
+      "agitator": "192.168.100.50"
+    },
+    "io": {
+      "lift_locate_extended_6": 1,
+      "lift_locate_retracted_6": 2,
+      "lift_locate_pre_6": 3,
+      "lift_locate_main_6": 4,
+      "upper_housing_clamp_open": 5,
+      "upper_housing_clamp_closed": 6,
+      "hopper_conveyor_indexing": 7,
+      "hopper_conveyor_part_detection": 8,
+      "robot4_air1_toggle": 5,
+      "right_handle_rotator_slide_open": 9,
+      "right_handle_rotator_slide_closed": 10,
+      "right_handle_rotator_place": 11,
+      "right_handle_rotator_pick": 12
+    },
+    "valve": {
+      "slave_id": 4,
+      "lift_locate_up_6": 1,
+      "lift_locate_pre_6": 2,
+      "lift_locate_main_6": 3,
+      "lift_locate_upper_housing_pallet_clamp_6": 4,
+      "right_handle_rotator_slide_close": 5,
+      "right_handle_rotator_pick_orient": 6
+    },
+    "hopper_conveyor": {
+      "index_speed": 200,
+      "homing_speed": 50,
+      "index_length": 1220,
+      "home_offset": 0
+    },
+    "motor": {
+      "address": 0,
+      "angle_kp": 100,
+      "angle_ki": 20,
+      "speed_kp": 100,
+      "speed_ki": 50,
+      "torque_kp": 20,
+      "torque_ki": 20,
+      "speed_limit": 200
+    }
+  },
+  "station5": {
+    "robot": "192.168.100.11",
+    "robot_type": "rc8",
+    "robot_speed": 10,
+    "wago": "192.168.100.2",
+    "cognex": "192.168.100.16",
+    "barcode_labeler": "192.168.100.24",
+    "barcode_1": "192.168.100.17",
+    "unload_mode": "binning",
+    "en_binning_track": true,
+    "bin_full_count": 10,
+    "unload_num": 0,
+    "feeders": {
+      "lower_housing": "192.168.100.40"
+    },
+    "io": {
+      "lift_locate_extended_1": 6,
+      "lift_locate_retracted_1": 8,
+      "lift_locate_pre_1": 10,
+      "lift_locate_main_1": 12,
+      "whirl_rotator_cw": 17,
+      "whirl_rotator_ccw": 18,
+      "whirl_rotator_part_presence": 19,
+      "boxing_sensor_1": 20,
+      "boxing_sensor_2": 21,
+      "boxing_sensor_3": 22,
+      "box_clamp_retracted": 23,
+      "box_clamp_engaged": 24,
+      "box_cylinder_retracted": 25,
+      "product_exit_conveyor": 26,
+      "reject_conveyor_sensor": 27,
+      "box_cylinder_actuate": 3
+    },
+    "valve": {
+      "slave_id": 1,
+      "lift_locate_up_1": 11,
+      "lift_locate_pre_1": 12,
+      "lift_locate_main_1": 13,
+      "whirl_rotator": 14,
+      "label_air": 15,
+      "box_clamp_engage": 16
+    },
+    "motor": {
+      "address": 1,
+      "angle_kp": 100,
+      "angle_ki": 20,
+      "speed_kp": 100,
+      "speed_ki": 50,
+      "torque_kp": 20,
+      "torque_ki": 20,
+      "speed_limit": 40,
+      "offset_speed": 80
+    },
+    "labeler": {
+      "enabled": true,
+      "home_offset": 249.1,
+      "rot_per_revolution": 29.5,
+      "label_pitch": 53.975,
+      "label_length": 50.8,
+      "sensor_timeout": 1000000,
+      "sensor_offset": 1,
+      "wago": "192.168.100.2",
+      "io": {
+        "label_applicator": 14
+      }
+    }
+  },
+  "pallet": {
+    "count": 20,
+    "startup_timeout": 3,
+    "gate_actuation_time": 2,
+    "main_gate_on_delay": 1,
+    "spacing": {
+      "1": 1,
+      "2": 0,
+      "3": 1,
+      "4": 2,
+      "5": 4,
+      "6": 3,
+      "7": 6
+    },
+    "release_delay": {
+      "1": 1,
+      "2": 3,
+      "3": 1,
+      "4": 1,
+      "5": 1,
+      "6": 1,
+      "7": 1
+    }
+  },
+  "single_cycle_pallet_timeout": 20,
+  "peripheral": {
+    "wago": "192.168.100.6",
+    "io": {
+      "main_air_status_reverse": 1,
+      "aux_air_status_reverse": 2,
+      "door_safety_circuit": 5,
+      "main_air": 1,
+      "main_conveyor": 2,
+      "aux_air": 3,
+      "door_lock": 4,
+      "led_red": 9,
+      "led_orange": 10,
+      "led_green": 11
+    }
+  },
+  "final_vision": {
+    "cognex": "192.168.100.70",
+    "trigger_open": true,
+    "dial_open": true,
+    "support_arm_open": true,
+    "pinion_final": true,
+    "dial_final": true,
+    "handle_gaps_final": true,
+    "support_arm_final": true,
+    "hopper_final": true,
+    "trigger_final": true
+  },
+  "tracking": {
+    "total": 0,
+    "total_current": 0,
+    "rejected": 0,
+    "rejected_current": 0,
+    "avg_built_hourly": 0,
+    "avg_rejected_hourly": 0,
+    "avg_build_time": 0,
+    "avg_reject_time": 0
+  }
+}

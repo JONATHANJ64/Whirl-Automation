@@ -1,0 +1,924 @@
+'!TITLE "Pro1"
+
+SUB MAIN
+
+#DEFINE PART_TO_PICK I10
+#DEFINE POS_COUNTER I14
+#DEFINE NEAREST_POINT I15
+#DEFINE SKIP_SENSOR_CHECKS I17
+#DEFINE NEAREST_POINT_TOFFSET I18
+#DEFINE TOOL_OFFSET I19
+#DEFINE SENSOR_RESPONSE_TIMEOUT I20
+#DEFINE CAMERA_NOT_BLOCKED I22
+#DEFINE MOVING_TO_PARK I25
+#DEFINE SKIP_COL_DETECTION I28
+#DEFINE PREFETCH_PART I30
+#DEFINE PREFETCH_FINISHED I31
+#DEFINE R_WAITING I32
+#DEFINE CROSSGEAR_PICKED I60
+#DEFINE PINION_PICKED I61
+#DEFINE CRANKHANDLE_PICKED I62
+#DEFINE RINGGEAR_PICKED I63
+#DEFINE CROSSGEAR_PLACED_OK I40
+#DEFINE PINION_PLACED_OK I41
+#DEFINE CRANKHANDLE_PLACED_OK I42
+#DEFINE RINGGEAR_PLACED_OK I43
+#DEFINE SPDSLOW F50
+#DEFINE SPD20 F51
+#DEFINE SPD40 F52
+#DEFINE SPD60 F53
+#DEFINE SPD80 F54
+#DEFINE SPD100 F55
+#DEFINE SPDRAPID F56
+#DEFINE TASK_COMPLETED I50
+#DEFINE PART_IN_FIXTURE I69
+#DEFINE PARK_COMPLETE I70
+#DEFINE ERR_SENSOR_CLOSED I80
+#DEFINE ERR_SENSOR_OPEN I81
+#DEFINE ERR_PICKPART I82
+#DEFINE BESTFIG I95
+#DEFINE MAX_POS_DIST F11
+#DEFINE POS_DIST_TEMP F12
+#DEFINE POS_CHECK_DISTANCE F13
+#DEFINE P_TEMP1 P198
+#DEFINE P_TEMP2 P199
+
+
+
+RESETAREA 1
+
+RESETAREA 2
+
+RESETAREA 3
+
+RESETAREA 4
+
+TAKEARM
+
+COLLISIONDETECTION FALSE, 7
+
+CHANGEWORK 1
+
+IF (MOTORSTATE = 0) THEN
+	MOTOR ON
+END IF
+
+MOVING_TO_PARK = 0
+
+TASK_COMPLETED = 0
+
+CROSSGEAR_PICKED = 0
+
+PINION_PICKED = 0
+
+CRANKHANDLE_PICKED = 0
+
+RINGGEAR_PICKED = 0
+
+CROSSGEAR_PLACED_OK = 0
+
+PINION_PLACED_OK = 0
+
+CRANKHANDLE_PLACED_OK = 0
+
+RINGGEAR_PLACED_OK = 0
+
+SENSOR_RESPONSE_TIMEOUT = 0
+
+ERR_SENSOR_CLOSED = 0
+
+ERR_SENSOR_OPEN = 0
+
+ERR_PICKPART = 0
+
+PARK_COMPLETE = 0
+
+POS_COUNTER = 0
+
+POS_DIST_TEMP = 0
+
+PREFETCH_FINISHED = 0
+
+R_WAITING = 0
+
+ 
+CALLBYNAME "PICKPART" & PART_TO_PICK
+
+PART_TO_PICK = 0
+
+TASK_COMPLETED = 1
+
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART1		  ' Pick Cross Gear
+
+
+PART_TO_PICK = 0
+SPEEDMODE 3
+
+		CALL OPENHAND
+		CHANGETOOL 1
+		CAMERA_NOT_BLOCKED = 1
+		SPEED 100
+		DECEL 50
+		MOVE P, @0 P[41], NEXT
+		CAMERA_NOT_BLOCKED = 0
+
+
+									 			 'Transfer Cognex location values stored in D variables 10-12 to robot point variables
+				 		   			  			' D variables at 20, 30 and 40 for other parts.				  
+		'LETRZ P41 = D12
+		
+		LETX P10 = D10
+		LETY P10 = D11
+		LETRZ P10 = D12 
+
+		LETX P11 = D10
+		LETY P11 = D11
+		LETRZ P11 = D12
+
+		LETX P20 = D10  						' These point variables are used in the instance of a Cross Gear being picked up backwards (see below)
+		LETY P20 = D11
+		LETRZ P20 = D12 
+
+		LETX P21 = D10
+		LETY P21 = D11
+		LETRZ P21 = D12
+		
+		IF (D12 <= 90) AND (D12 >= -90)	THEN 	'  Checking to determine if part is rotated more than 90 degrees in either direction
+
+			P_TEMP1 = P41
+			P_TEMP2 = P10
+			CALL SHORTEST_MOVE									'Calculate the best figure for P10
+			LETF P10 = BESTFIG 
+
+			P_TEMP1 = P10
+			P_TEMP2 = P11
+			CALL SHORTEST_MOVE									'Calculate the best figure for P11
+			LETF P11 = BESTFIG 
+
+			ARRIVE 90
+
+			SETAREA 1
+
+			DECEL 15
+			MOVE P, @P P[10]
+			SPEED 30
+			MOVE P, @E P[11]
+			CALL PICKPARTCLOSED
+			MOVE P, @P P[10]
+			SPEED 100
+			MOVE P, @P P[41]
+			CROSSGEAR_PICKED = 1					'Announce part has been picked
+
+			RESETAREA 1
+
+			MOVE P, @P P[12]
+			SPEED 50
+			MOVE P, @P P[13]
+			MOVE P, @P P[14], NEXT
+			CAMERA_NOT_BLOCKED = 1
+			IF PREFETCH_PART = 1 THEN
+				PREFETCH_FINISHED = 1
+				WAIT PREFETCH_PART = 0
+				PREFETCH_FINISHED = 0
+			END IF
+			MOVE P, @0 P[15]
+			MOVE P, @0 P[16]
+			CALL OPENHAND							'Place Part
+			MOVE P, @P P[15]
+			MOVE P, @P P[14]
+			MOVE P, @P P[13], NEXT
+			CAMERA_NOT_BLOCKED = 0
+			MOVE P, @P P[12]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+			WAITMOTION 0, 100
+			CAMERA_NOT_BLOCKED = 1
+			CROSSGEAR_PLACED_OK = 1					'Announce part has been placed
+			SPEED 5
+
+		ELSEIF (D12 > 90) OR (D12 < -90)	THEN   '  If part is rotated beyond 90 degrees in either direction, the part will be picked up backwards,
+												   '  so it must be rotated back 180 degrees before placing in lower housing
+			P_TEMP1 = P41
+			P_TEMP2 = P20
+			CALL SHORTEST_MOVE									'Calculate the best figure for P20
+			LETF P20 = BESTFIG 
+
+			P_TEMP1 = P20
+			P_TEMP2 = P21
+			CALL SHORTEST_MOVE									'Calculate the best figure for P21
+			LETF P21 = BESTFIG
+
+
+		
+			'LETRZ P41 = (D12 + 180)				   '  Adding 180 to rotation value so that robot always picks part away from conveyor(picking part backwards).
+			LETRZ P20 = (D12 + 180)				   '
+			LETRZ P21 = (D12 + 180)			       '
+
+			CAMERA_NOT_BLOCKED = 0
+
+			ARRIVE 90
+
+			SETAREA 1
+
+			DECEL 15
+			MOVE P, @P P[20]
+			SPEED 30
+			MOVE P, @E P[21]
+			CALL PICKPARTCLOSED
+			MOVE P, @P P[20]
+			SPEED 100
+			MOVE P, @P P[41]
+			CROSSGEAR_PICKED = 1					'Announce part has been picked
+
+			RESETAREA 1
+
+			MOVE P, @P P[12]
+			SPEED 50
+			MOVE P, @P P[13]
+			MOVE P, @P P[22], NEXT
+			CAMERA_NOT_BLOCKED = 1
+			IF PREFETCH_PART = 1 THEN
+				PREFETCH_FINISHED = 1
+				WAIT PREFETCH_PART = 0
+				PREFETCH_FINISHED = 0
+			END IF
+			MOVE P, @0 P[23]
+			MOVE P, @0 P[24]
+			CALL OPENHAND							'Place Part
+			MOVE P, @P P[23]
+			MOVE P, @P P[22]
+			MOVE P, @P P[13], NEXT
+			CAMERA_NOT_BLOCKED = 0
+			MOVE P, @P P[12]
+			CHANGETOOL 0
+			MOVE P, @P P[99], NEXT
+			ARRIVE 30
+			CROSSGEAR_PLACED_OK = 1					'Announce part has been placed
+			ARRIVE 98
+			CAMERA_NOT_BLOCKED = 1
+
+			SPEED 5			
+		
+		END IF
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+	
+SUB PICKPART2    ' Pick Pinion
+
+PART_TO_PICK = 0
+SPEEDMODE 3		
+		    
+			CALL OPENHAND
+			CHANGETOOL 1
+			CAMERA_NOT_BLOCKED = 1
+			SPEED 100
+			MOVE P, @0 P[42], NEXT
+			
+			IF (D22 <= 90) AND (D22 >= -90)	THEN 	'  Checking to determine if part is rotated more than 90 degrees in either direction					
+
+				LETX P30 = D20
+				LETY P30 = D21
+				LETRZ P30 = D22 
+
+				LETX P31 = D20
+				LETY P31 = D21
+				LETRZ P31 = D22
+
+				P_TEMP1 = P42
+				P_TEMP2 = P30
+				CALL SHORTEST_MOVE									'Calculate the best figure for P30
+				LETF P30 = BESTFIG 
+
+				P_TEMP1 = P30
+				P_TEMP2 = P31
+				CALL SHORTEST_MOVE									'Calculate the best figure for P31
+				LETF P31 = BESTFIG 
+
+
+				CAMERA_NOT_BLOCKED = 0
+				
+				ARRIVE 90
+
+				SETAREA 2
+
+				MOVE P, @P P[30]
+				SPEED 30
+				MOVE P, @E P[31]
+				CALL PICKPARTCLOSED
+				MOVE P, @P P[30]
+				SPEED 100
+
+				RESETAREA 2
+
+				MOVE P, @P P[42]
+				PINION_PICKED = 1					'Announce part has been picked
+				MOVE P, @P P[12]
+				DECEL 20
+				MOVE P, @P P[13]
+				SPEED 75
+				DECEL 20
+				MOVE P, @P P[32]
+				CAMERA_NOT_BLOCKED = 1
+				MOVE L, @2 P[33]
+				DECEL 50
+				MOVE L, @0 P[34]
+				SPEED 20
+				MOVE L, @0 P[35], NEXT
+				ARRIVE 100
+				CALL OPENHAND						'Place part
+				SPEED 75
+				ACCEL 30
+				MOVE L, @25 P[33]
+				MOVE P, @P P[32]
+				MOVE P, @P P[12], NEXT
+				CAMERA_NOT_BLOCKED = 0
+				CHANGETOOL 0
+				DECEL 15
+				MOVE P, @P P[99], NEXT
+				ARRIVE 30
+				PINION_PLACED_OK = 1				'Announce part has been placed
+				ARRIVE 98
+				CAMERA_NOT_BLOCKED = 1
+
+				SPEED 5
+
+
+			ELSEIF (D22 > 90) OR (D22 < -90)	THEN   '  If part is rotated beyond 90 degrees in either direction, the part will be picked up backwards,
+													   '  so it must be rotated back 180 degrees before placing in lower housing
+
+		
+				'LETRZ P42 = (D22 + 180)				   '  Adding 180 to rotation value so that robot always picks part away from conveyor(picking part backwards).
+				LETRZ P36 = (D22 + 180)				   
+				LETRZ P37 = (D22 + 180)			       
+
+				LETX P36 = D20
+				LETY P36 = D21
+
+				LETX P37 = D20
+				LETY P37 = D21
+
+				P_TEMP1 = P42
+				P_TEMP2 = P36
+				CALL SHORTEST_MOVE									'Calculate the best figure for P30
+				LETF P36 = BESTFIG 
+
+				P_TEMP1 = P36
+				P_TEMP2 = P37
+				CALL SHORTEST_MOVE									'Calculate the best figure for P31
+				LETF P37 = BESTFIG 
+				CAMERA_NOT_BLOCKED = 0
+
+				ARRIVE 90
+
+				SETAREA 2
+
+				MOVE P, @P P[36]
+				SPEED 30
+				MOVE P, @E P[37]
+				CALL PICKPARTCLOSED
+				MOVE P, @P P[36]
+				SPEED 100
+
+				RESETAREA 2
+
+				MOVE P, @P P[42]
+				PINION_PICKED = 1					'Announce part has been picked
+				MOVE P, @P P[12]
+				MOVE P, @0 P[60], NEXT
+				ARRIVE 100
+				CAMERA_NOT_BLOCKED = 1
+				SPEED 30
+				MOVE L, @0 P[61]
+				PART_IN_FIXTURE = 1
+				CALL OPENHAND
+				SPEED 75
+				MOVE L, @0 P[62]
+				MOVE P, @0 P[63], NEXT
+				ARRIVE 100
+				MOVE L, @E P[64]
+				CALL PICKPARTCLOSED
+				SPEED 30
+				MOVE L, @0 P[65]
+				PART_IN_FIXTURE = 0
+				SPEED 100
+				ACCEL 30
+				MOVE L, @P P[66]
+				MOVE L, @P P[33]
+				MOVE L, @P P[34]
+				MOVE L, @0 P[35], NEXT
+				ARRIVE 100
+				CALL OPENHAND						'Place part
+				MOVE L, @25 P[33]
+				MOVE P, @P P[32]
+				MOVE P, @P P[12], NEXT
+				CAMERA_NOT_BLOCKED = 0
+				CHANGETOOL 0
+				DECEL 15
+				MOVE P, @P P[99], NEXT
+				ARRIVE 30
+				PINION_PLACED_OK = 1				'Announce part has been placed
+				ARRIVE 90
+				CAMERA_NOT_BLOCKED = 1
+				SPEED 5
+			END IF
+
+
+
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART3  ' Pick Crank Handle
+
+PART_TO_PICK = 0
+SPEEDMODE 3
+	
+			CALL OPENHAND
+			CHANGETOOL 1
+			CAMERA_NOT_BLOCKED = 1
+			SPEED 100
+			MOVE P, @10 P[44], NEXT
+
+			LETX P70 = D30
+			LETY P70 = D31
+			LETRZ P70 = D32
+
+			LETX P71 = D30
+			LETY P71 = D31
+			LETRZ P71 = D32
+			
+
+			LETF P70 = 1
+		    J70 = P2J(P70)
+		    IF (JOINT(4, J70) >= 90) OR (JOINT(4, J70) <= -90) THEN
+		      LETF P70 = 5
+		    END IF
+
+			P_TEMP1 = P44
+			P_TEMP2 = P70
+			CALL SHORTEST_MOVE									'Calculate the best figure for P70
+			LETF P70 = BESTFIG 
+
+			P_TEMP1 = P70
+			P_TEMP2 = P71
+			CALL SHORTEST_MOVE									'Calculate the best figure for P71
+			LETF P71 = BESTFIG 
+
+
+			CAMERA_NOT_BLOCKED = 0
+
+			ARRIVE 90
+
+			SETAREA 4
+
+			MOVE P, @P P[70]
+			SPEED 30
+			MOVE P, @E P[71]
+			CALL PICKPARTCLOSED
+			MOVE P, @P P[70]
+			SPEED 100
+
+			RESETAREA 4
+
+			MOVE P, @P P[44]
+			CRANKHANDLE_PICKED = 1									'Announce part has been picked
+			MOVE P, @P P[12]
+			MOVE P, @P P[13], NEXT
+			CAMERA_NOT_BLOCKED = 1
+			IF PREFETCH_PART = 1 THEN
+				PREFETCH_FINISHED = 1
+				WAIT PREFETCH_PART = 0
+				PREFETCH_FINISHED = 0
+			END IF
+			SPEED 100
+			MOVE P, @P P[72]
+			SPEED 20
+			MOVE L, @0 P[73], NEXT
+			ARRIVE 100
+			CALL OPENHAND											'Place Part
+			MOVE L, @P P[72]
+			SPEED 100	
+			MOVE P, @P P[13], NEXT
+			CAMERA_NOT_BLOCKED = 0
+			SPEED 50
+			MOVE P, @P P[12]
+			CHANGETOOL 0
+			MOVE P, @P P[99], NEXT
+			ARRIVE 30
+			CRANKHANDLE_PLACED_OK = 1									'Announce part has been placed
+			ARRIVE 98
+			CAMERA_NOT_BLOCKED = 1
+			SPEED 5
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART4  ' Pick Ring Gear
+	
+PART_TO_PICK = 0
+SPEEDMODE 3
+	
+			CALL CLOSEHAND
+			CHANGETOOL 1
+			CAMERA_NOT_BLOCKED = 1
+			SPEED 100
+			MOVE P, @10 P[43], NEXT
+
+			LETX P50 = D40
+			LETY P50 = D41
+
+			LETX P51 = D40
+			LETY P51 = D41
+			
+			CAMERA_NOT_BLOCKED = 0
+
+			ARRIVE 90
+
+			SETAREA 3
+
+			MOVE P, @P P[50]
+			SPEED 20
+			MOVE L, @E P[51]
+			CALL PICKPARTOPEN
+			MOVE P, @P P[50]
+			SPEED 100
+
+			RESETAREA 3
+
+			MOVE P, @P P[43]
+			RINGGEAR_PICKED = 1					'Announce part has been picked
+			DECEL 20
+			MOVE P, @P P[12]
+			SPEED 100
+			MOVE P, @P P[52]
+			MOVE P, @P P[53]
+			CAMERA_NOT_BLOCKED = 1
+			DECEL 15
+			MOVE P, @P P[54]
+			SPEED 20
+			MOVE L, @0 P[55]
+			CALL CLOSEHAND						'Place Part
+			SPEED 75
+			MOVE L, @P P[56]	
+			MOVE P, @P P[57]
+			MOVE P, @P P[58], NEXT
+			CAMERA_NOT_BLOCKED = 0
+			MOVE P, @P P[12]
+			CHANGETOOL 0
+			MOVE P, @P P[99], NEXT
+			ARRIVE 30
+			RINGGEAR_PLACED_OK = 1					'Announce part has been placed
+			ARRIVE 98
+			CAMERA_NOT_BLOCKED = 1
+			SPEED 5
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART5				'Move to home position
+
+CALL MOVE_TO_PARK
+
+END SUB
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+SUB CLOSEHAND	'Fully Closed Hand
+	
+	RESET IO[64]
+	SET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF
+	IF IO[49] = OFF THEN	
+		WAIT IO[49] = ON, 1000, SENSOR_RESPONSE_TIMEOUT
+		IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+			ERR_SENSOR_CLOSED = 1
+			R_WAITING = 1 
+			WAIT ERR_SENSOR_CLOSED = 0 
+			R_WAITING = 0
+			STOP
+		END IF
+	END IF
+END SUB
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+SUB OPENHAND	'Fully Open Hand
+
+	SET IO[64]
+	RESET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF
+	IF IO[48] = OFF THEN	
+		WAIT IO[48] = ON, 1000, SENSOR_RESPONSE_TIMEOUT
+		IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+			ERR_SENSOR_OPEN = 1
+			R_WAITING = 1 
+			WAIT ERR_SENSOR_OPEN = 0
+			R_WAITING = 0
+			STOP
+		END IF
+	END IF
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPARTCLOSED		'Hand sensor state should be both sensors off (open and closed) if a part is in hand
+
+	RESET IO[64]
+	SET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF	
+	DELAY 100
+	IF (IO[48] = ON) OR (IO[49] = ON) THEN
+		WAIT (IO[48] = OFF) AND (IO[49] = OFF), 2000, SENSOR_RESPONSE_TIMEOUT
+		IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+			ERR_PICKPART = 1
+			R_WAITING = 1
+			WAIT ERR_PICKPART = 0
+			R_WAITING = 0
+			STOP
+		END IF
+	END IF
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPARTOPEN	'Hand sensor state should be both sensors off (open and closed) if a part is in hand (Picking a part with an Open hand action)
+
+	RESET IO[65]
+	SET IO[64]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF	
+	DELAY 100
+	IF (IO[48] = ON) OR (IO[49] = ON) THEN 
+		WAIT (IO[48] = OFF) AND (IO[49] = OFF), 2000, SENSOR_RESPONSE_TIMEOUT
+		IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+			ERR_PICKPART = 1
+			R_WAITING = 1
+			WAIT ERR_PICKPART = 0
+			R_WAITING = 0
+			STOP
+		END IF
+	END IF
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------
+
+SUB SHORTEST_MOVE
+	
+	DEFDBL JDIST = 0
+	DEFDBL BEST_DIST = 10000
+	DEFINT BEST_FIG = 0
+	DEFINT II = 0
+	DEFINT XX = 0
+	DIM IIA(7) AS INTEGER
+	IIA(0) = 1
+	IIA(1) = 5
+	IIA(2) = 9
+	IIA(3) = 13
+	IIA(4) = 21
+	IIA(5) = 25
+	IIA(6) = 29
+	DEFINT ERRORCODE = 0
+
+	J90 = P2J(P_TEMP1)
+	FOR II = 0 TO 6
+		LETF P_TEMP2 = IIA(II)
+		J91 = P2J(P_TEMP2)
+		FOR XX = 1 TO 6
+			JDIST = JDIST + ABS(JOINT(XX, J90) - JOINT(XX, J91))
+		NEXT
+		IF JDIST < BEST_DIST THEN
+			BEST_DIST = JDIST
+			BEST_FIG = FIG(P_TEMP2)
+		END IF
+		JDIST = 0
+	NEXT
+	BESTFIG = BEST_FIG
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB MOVE_TO_PARK
+
+	MOVING_TO_PARK = 1
+	SPEEDMODE 0
+
+	IF SKIP_COL_DETECTION = 0 THEN
+		COLLISIONDETECTION TRUE, 7
+	ELSE
+		SKIP_COL_DETECTION = 0
+	END IF
+
+	RESETAREA 1
+	RESETAREA 2
+	RESETAREA 3
+	RESETAREA 4
+
+	CHANGETOOL 1
+	SPEED 20
+	IF (PREFETCH_PART = 1) AND (DIST(CURPOS, P[14]) < 5.0) THEN
+		MOVE P, @P P[13]
+		MOVE P, @P P[12]
+		MOVE P, @P P[41]
+		MOVE P, @0 P[10]
+		CALL OPENHAND
+		MOVE P, @P P[41]
+		CHANGETOOL 0
+		MOVE P, @P P[99] 
+	ELSEIF (PREFETCH_PART = 1) AND (DIST(CURPOS, P[22]) < 5.0) THEN
+		MOVE P, @P P[13]
+		MOVE P, @P P[12]
+		MOVE P, @P P[41]
+		MOVE P, @0 P[20]
+		CALL OPENHAND
+		MOVE P, @P P[41]
+		CHANGETOOL 0
+		MOVE P, @P P[99]
+	ELSEIF (PREFETCH_PART = 1) AND (DIST(CURPOS, P[13]) < 5.0) THEN				
+		MOVE P, @P P[12]
+		MOVE P, @P P[44]
+		MOVE P, @0 P[70]
+		CALL OPENHAND
+		MOVE P, @P P[44]
+		CHANGETOOL 0
+		MOVE P, @P P[99]		
+	ELSE
+		PART_TO_PICK = 0
+		NEAREST_POINT = -1
+		SPEED 20
+		DIM CURRENTPOS AS POSITION
+		DIM CURRENT_P_VALUES AS POSITION
+		POS_CHECK_DISTANCE = MAX_POS_DIST	
+		FOR TOOL_OFFSET = 0 TO 1
+			CHANGETOOL TOOL_OFFSET
+			FOR POS_COUNTER = 10 TO 87 								'Find nearest taught point from current robot position within distance of variable MAX_POS_DIST
+				CURRENT_P_VALUES = P[POS_COUNTER]
+				IF POSX(CURRENT_P_VALUES) + POSY(CURRENT_P_VALUES) + POSZ(CURRENT_P_VALUES) <> 0 THEN			'Dont check unused position variables
+					POS_DIST_TEMP = DIST(CURPOS, P[POS_COUNTER])
+					IF POS_DIST_TEMP < MAX_POS_DIST THEN
+						IF POS_DIST_TEMP < POS_CHECK_DISTANCE THEN
+							POS_CHECK_DISTANCE = POS_DIST_TEMP
+							NEAREST_POINT = POS_COUNTER
+							NEAREST_POINT_TOFFSET = TOOL_OFFSET
+						END IF
+					END IF
+				END IF
+			NEXT
+		NEXT
+
+	'	FOR POS_COUNTER = 0 TO 99 								'Find nearest taught point from current robot position within distance of variable MAX_POS_DIST
+	'		POS_DIST_TEMP = DIST(CURPOS, P[POS_COUNTER])
+	'		IF POS_DIST_TEMP < MAX_POS_DIST THEN
+	'			IF POS_DIST_TEMP < POS_CHECK_DISTANCE THEN
+	'				POS_CHECK_DISTANCE = POS_DIST_TEMP
+	'				NEAREST_POINT = POS_COUNTER
+	'			END IF
+	'		END IF
+	'	NEXT
+
+		CHANGETOOL NEAREST_POINT_TOFFSET
+
+		SELECT CASE NEAREST_POINT
+		
+			CASE 99				'Near park position
+				MOVE P, @0 P[99]
+		
+			CASE 10 TO 11		'Picking Cross Gear
+			CALL OPENHAND
+				MOVE P, @P P[41]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]	
+
+			CASE 15 TO 16		'Placing Cross Gear
+				CALL OPENHAND
+				MOVE P, @P P[14]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 20 TO 21		'Picking Cross Gear 180
+				CALL OPENHAND
+				MOVE L, @0 P[41]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 23 TO 24		'Placing Cross Gear 180
+				CALL OPENHAND
+				MOVE P, @P P[23]
+				MOVE P, @P P[22]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 30 TO 31		'Picking Pinion
+				CALL OPENHAND
+				MOVE P, @P P[42]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 34 TO 35		'Placing pinion
+				CALL OPENHAND
+				MOVE L, @P P[33]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+	
+			CASE 50 TO 51		'Picking Ring Gear
+				CALL CLOSEHAND
+				MOVE P, @P P[43]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 53 TO 55				'Placing Ring Gear
+				CALL CLOSEHAND
+				MOVE L, @0 P[53]
+				MOVE L, @P P[52]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 56 		'Departing placing Ring Gear
+				CALL CLOSEHAND 
+				MOVE L, @0 P[56]
+				MOVE P, @P P[57]
+				MOVE P, @P P[58]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 57 TO 58		'Departing placing Ring Gear
+				CALL CLOSEHAND
+				MOVE P, @P P[57]
+				MOVE P, @P P[58]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 61				'Pinion Fixture
+				CALL OPENHAND
+				MOVE P, @P P[60]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 64				'Pinion Fixture
+				CALL OPENHAND
+				MOVE P, @P P[63]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+
+			CASE 70 TO 71		'Picking Crank Handle
+				CALL OPENHAND
+				MOVE P, @P P[44]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 72 TO 73		'Placing Crank Handle
+				CALL OPENHAND
+				MOVE L, @P P[72]
+				MOVE P, @P P[13]
+				MOVE P, @P P[12]
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+
+			CASE 84 TO 85		'Temp position variables used for getfig
+				CALL OPENHAND
+				CHANGETOOL 0
+				SPEED 5
+				MOVE P, @0 P[99]
+
+			CASE -1				' Not near any taught point within distance of variable MAX_POS_DIST
+				CALL OPENHAND
+				CHANGETOOL 0
+				SPEED 5
+				MOVE P, @0 P[99]
+		
+			CASE ELSE			'Points that can reach park directly
+				CALL OPENHAND
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+			
+		END SELECT
+	END IF
+
+	PREFETCH_PART = 0
+	CAMERA_NOT_BLOCKED = 1
+	PARK_COMPLETE = 1
+	MOVING_TO_PARK = 0
+	R_WAITING = 1
+	WAIT PARK_COMPLETE = 0
+	R_WAITING = 0
+
+END SUB
+

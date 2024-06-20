@@ -1,0 +1,857 @@
+'!TITLE "Pro1"
+
+
+SUB MAIN 
+
+#DEFINE PART_TO_PICK I10
+#DEFINE POS_COUNTER I14
+#DEFINE NEAREST_POINT I15
+#DEFINE SKIP_SENSOR_CHECKS I17
+#DEFINE NEAREST_POINT_TOFFSET I18
+#DEFINE TOOL_OFFSET I19
+#DEFINE SENSOR_RESPONSE_TIMEOUT I20
+#DEFINE CAMERA_NOT_BLOCKED I22
+#DEFINE MOVING_TO_PARK I25
+#DEFINE SKIP_COL_DETECTION I28
+#DEFINE R_WAITING I32
+#DEFINE LHOUSING_PICKED I60
+#DEFINE LHOUSING_PLACED_OK I40
+#DEFINE UNLOAD_FINISHED I41
+#DEFINE TASK_COMPLETED I50
+#DEFINE READY_FOR_LABEL I53
+#DEFINE APPLY_LABEL I54
+#DEFINE LABEL_MOTION_DONE I55
+#DEFINE LABEL_GOOD I56
+#DEFINE LABEL_BAD I57
+#DEFINE SKIP_LABEL I58
+#DEFINE ORIENT_WHIRL I59
+#DEFINE REQUEST_ROTATE_HOME I61
+#DEFINE REQUEST_ROTATE_180 I62
+#DEFINE PART_IN_FIXTURE I69
+#DEFINE PARK_COMPLETE I70
+#DEFINE PALLETIZE I73
+#DEFINE CUR_PALLET_INDEX I75
+#DEFINE ERR_SENSOR_CLOSED I80
+#DEFINE ERR_SENSOR_OPEN I81
+#DEFINE ERR_PICKPART I82
+#DEFINE BESTFIG I95
+#DEFINE MAX_POS_DIST D20
+#DEFINE POS_DIST_TEMP D21
+#DEFINE POS_CHECK_DISTANCE D22
+#DEFINE SPDSLOW F50
+#DEFINE SPD20 F51
+#DEFINE SPD40 F52
+#DEFINE SPD60 F53
+#DEFINE SPD80 F54
+#DEFINE SPD100 F55
+#DEFINE SPDRAPID F56
+#DEFINE P_TEMP1 P198
+#DEFINE P_TEMP2 P199
+
+RESETAREA 0
+RESETAREA 1
+
+COLLISIONDETECTION FALSE, 1
+COLLISIONDETECTION FALSE, 2
+COLLISIONDETECTION FALSE, 6
+COLLISIONDETECTION FALSE, 7
+
+TAKEARM
+
+IF (MOTORSTATE = 0) THEN
+	MOTOR ON
+END IF
+
+CHANGEWORK 1
+
+TASK_COMPLETED = 0
+
+SENSOR_RESPONSE_TIMEOUT = 0
+
+POS_COUNTER = 0
+
+POS_DIST_TEMP = 0
+
+LHOUSING_PICKED = 0
+
+LHOUSING_PLACED_OK = 0
+
+UNLOAD_FINISHED = 0
+
+READY_FOR_LABEL = 0
+
+APPLY_LABEL = 0
+
+LABEL_MOTION_DONE = 0
+
+LABEL_GOOD = 0
+
+LABEL_BAD = 0
+
+REQUEST_ROTATE_HOME = 0
+
+REQUEST_ROTATE_180 = 0
+
+ERR_SENSOR_CLOSED = 0
+
+ERR_SENSOR_OPEN = 0
+
+ERR_PICKPART = 0
+
+PARK_COMPLETE = 0
+
+R_WAITING = 0
+
+
+CALLBYNAME "PICKPART" & PART_TO_PICK
+
+PART_TO_PICK = 0
+
+TASK_COMPLETED = 1
+
+END SUB
+
+'---------------------------------------------------------------------------------------------------------------------------
+
+
+SUB PICKPART1			'Pick Lower Housing
+
+
+	PART_TO_PICK = 0
+	SPEEDMODE 3
+
+	CALL CLOSEHAND
+	CHANGETOOL 1
+	CAMERA_NOT_BLOCKED = 1
+	SPEED 50
+
+
+	LETRZ P82 = D12			'Transferring Cognex location variables to robot points
+	LETRZ P23 = D12
+	LETX P24 = D10
+	LETY P24 = D11
+	LETRZ P24 = D12 
+	LETX P25 = D10
+	LETY P25 = D11
+	LETRZ P25 = D12
+
+	LETF P24 = 1
+    J24 = P2J(P24)
+    IF (JOINT(4, J24) >= 90) OR (JOINT(4, J24) <= -90) THEN
+      LETF P24 = 5
+    END IF
+
+
+	P_TEMP1 = P24
+	P_TEMP2 = P25
+	CALL SHORTEST_MOVE									'Calculate the best figure for P25
+	LETF P25 = BESTFIG 
+
+
+	CAMERA_NOT_BLOCKED = 0
+	MOVE P, @P P[82]			'Begin picking
+	COLLISIONDETECTION TRUE, 1
+	MOVE P, @P P[23]
+
+	SETAREA 0
+
+	MOVE P, @P P[24]
+	COLLISIONDETECTION FALSE, 1
+	SPEED 20
+	ARRIVE 100
+							
+	COLLISIONDETECTION TRUE, 2
+	MOVE L, @E P[25]
+	ARRIVE 100										'Watch for collision, if detected, then move back to park position and stop program
+'	MOVE L, @E P[25], NEXT					
+'	DO UNTIL MOTIONCOMPLETE (-1, 1)									
+'		IF GETCOLLISIONSTATUS (2) <> 0 THEN
+'			MOTIONSKIP -1, 1
+'			COLLISIONDETECTION FALSE, 2
+'			COLLISIONDETECTION TRUE, 7
+'			MOVE P, @P P[23]
+'			RESETAREA 0
+'			SPEED 15
+'			MOVE P, @P P[82]
+'			CHANGETOOL 0
+'			MOVE P, @0 P[99]
+'			CAMERA_NOT_BLOCKED = 1
+'			STOP
+'		END IF
+'	LOOP 
+	COLLISIONDETECTION FALSE, 1
+	COLLISIONDETECTION FALSE, 2					
+	
+	CALL OPENHAND
+					
+	MOVE L, @P P[24]
+	SPEED 50
+	MOVE P, @P P[23]
+	MOVE P, @P P[82]
+	LHOUSING_PICKED = 1					'Announce part has been picked
+
+	RESETAREA 0
+
+	IF SKIP_LABEL = 0 THEN
+		'MOVE P, @P P[39]
+		'READY_FOR_LABEL = 1
+		'WAIT APPLY_LABEL = 1
+		'READY_FOR_LABEL = 0
+		'APPLY_LABEL = 0
+		'SPEED SPD40
+		'MOVE L, @0 P[40]
+		'MOVE L, @P P[42]
+		'MOVE L, @P P[43]
+		'MOVE L, @P P[44]
+		'MOVE L, @P P[45]
+		'MOVE L, @P P[46]
+		'MOVE L, @P P[47]
+		'MOVE L, @P P[48]
+		'MOVE L, @P P[49]
+		'MOVE L, @E P[53]
+		'SPEED SPD100
+		MOVE P, @0 P[149], NEXT
+		READY_FOR_LABEL = 1
+		ARRIVE 95
+		R_WAITING = 1
+		WAIT APPLY_LABEL = 1
+		R_WAITING = 0
+		READY_FOR_LABEL = 0
+		APPLY_LABEL = 0
+		SPEED 30
+		MOVE L, @E P[150]
+		MOVE L, @E P[151]
+		MOVE L, @E P[152]
+		MOVE L, @E P[153]
+		MOVE L, @E P[154]
+		ARRIVE 100
+		MOVE L, @5 P[155]
+		MOVE L, @E P[53]
+	
+		LABEL_MOTION_DONE = 1									'Ready for label scan
+		R_WAITING = 1
+		WAIT (LABEL_GOOD = 1) OR (LABEL_BAD = 1)
+		R_WAITING = 0
+		LABEL_MOTION_DONE = 0
+		
+		IF LABEL_BAD = 1 THEN
+			LABEL_BAD = 0								'Label verification failed, discard part and go home.		
+			MOVE L, @P P[54]
+			MOVE P, @P P[55]
+			MOVE P, @0 P[56]
+			CALL CLOSEHAND
+			MOVE L, @P P[55]
+			MOVE P, @0 P[99]
+			TASK_COMPLETED = 1
+			CAMERA_NOT_BLOCKED = 1
+			STOP
+		END IF
+
+		LABEL_GOOD = 0
+		LABEL_BAD = 0
+		MOVE L, @P P[50]
+		MOVE L, @P P[51]
+	END IF
+
+	MOVE P, @P P[81]									'Approach Place Point			
+	MOVE L, @P P[22]
+	CAMERA_NOT_BLOCKED = 1
+	SPEED 20
+	MOVE L, @0 P[26]
+	CALL CLOSEHAND
+
+	MOVE L, @P P[22]									'Begin travel back to park position
+	SPEED 50
+	MOVE P, @P P[81]
+	CHANGETOOL 0
+
+	MOVE P, @P P[99]
+	CAMERA_NOT_BLOCKED = 1
+	LHOUSING_PLACED_OK = 1								'Announce part has been placed
+	LHOUSING_PICKED = 0									'Required for app to function correctly
+	SPEED 5
+
+END SUB
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART2					'Unload product
+
+	PART_TO_PICK = 0
+	SPEEDMODE 3
+	REQUEST_ROTATE_HOME = 1
+
+	CALL CLOSEHAND
+	CHANGETOOL 0	
+	CAMERA_NOT_BLOCKED = 1
+	SPEED 50
+	'IF PALLETIZE = 1 THEN
+	'END IF	
+
+	MOVE P, @P P[60], NEXT			'Begin picking
+	MOVE L, @0 P[61]
+	CALL OPENHAND
+	MOVE P, @P P[60]
+	LHOUSING_PICKED = 1
+	R_WAITING = 1
+	WAIT REQUEST_ROTATE_HOME = 0
+	R_WAITING = 0
+
+
+	SELECT CASE ORIENT_WHIRL
+
+		CASE 1					'Begin Boxing - Whirl facing down
+			'REQUEST_ROTATE_HOME = 1
+			'WAIT REQUEST_ROTATE_HOME = 0
+
+			'rotate crank arm forward
+			MOVE P, @P P[129]
+			MOVE P, @P P[133]
+			SPEED 10
+			MOVE L, @P P[132]
+			MOVE C, P[134], @P P[131]
+			MOVE L, @P P[136]
+			SPEED 50
+			MOVE P, @P P[60]
+
+			MOVE P, @P P[62]
+			MOVE L, @P P[63]
+			MOVE L, @P P[64]
+			SPEED 20
+			'PART_IN_FIXTURE = 1
+			MOVE L, @0 P[65]	'Place in rotator
+			CALL CLOSEHAND
+			SPEED 50
+			MOVE L, @P P[66]
+			REQUEST_ROTATE_180 = 1
+			R_WAITING = 1
+			WAIT REQUEST_ROTATE_180 = 0
+			R_WAITING = 0
+			MOVE L, @P P[67]
+			SPEED 20
+			MOVE L, @0 P[68]
+			CALL PICKPARTOPEN
+			MOVE L, @P P[69]	'Departing rotator
+			PART_IN_FIXTURE = 0
+			SPEED 50
+			MOVE L, @P P[70]
+			MOVE L, @P P[71]
+			CAMERA_NOT_BLOCKED = 0
+			MOVE L, @P P[72]
+			MOVE L, @P P[73]
+			MOVE L, @P P[74]								
+			MOVE P, @P P[110]
+			CAMERA_NOT_BLOCKED = 1
+
+			DIM ROT_TEMP AS POSITION
+			ROT_TEMP = P[110]
+			LETRZ ROT_TEMP = POSRZ(P[CUR_PALLET_INDEX + 100])
+			MOVE P, @P ROT_TEMP								'Rotate J6 to next point position before actually moving there
+			MOVE L, @P P[CUR_PALLET_INDEX + 100]
+			SPEED 20
+			MOVE L, @0 P[CUR_PALLET_INDEX + 110]
+			CALL CLOSEHAND
+			SPEED 50
+			MOVE L, @0 P[CUR_PALLET_INDEX + 100]
+			CAMERA_NOT_BLOCKED = 0
+			MOVE P, @P P[74] 
+			MOVE P, @P P[73]
+			MOVE L, @0 P[99]
+			UNLOAD_FINISHED = 1
+			R_WAITING = 1
+			WAIT UNLOAD_FINISHED = 0
+			R_WAITING = 0
+
+		CASE 0						'Boxing/Binning - Whirl facing up
+
+			IF PALLETIZE = 1 THEN	'Choosing boxing
+				'rotate crank arm backward
+				MOVE P, @P P[130]
+				CAMERA_NOT_BLOCKED = 1
+				SPEED 10
+				MOVE L, @P P[131]
+				MOVE C, P[134], @P P[132]
+				MOVE L, @P P[135]
+				MOVE P, @P P[60]
+				SPEED 50
+				CAMERA_NOT_BLOCKED = 0
+				MOVE P, @P P[74]
+				MOVE P, @P P[110]
+				MOVE L, @P P[CUR_PALLET_INDEX + 100]
+				CAMERA_NOT_BLOCKED = 1
+				SPEED 10
+				MOVE L, @0 P[CUR_PALLET_INDEX + 110]
+				CALL CLOSEHAND
+				SPEED 50
+				MOVE L, @0 P[CUR_PALLET_INDEX + 100]
+				MOVE P, @P P[110]
+				CAMERA_NOT_BLOCKED = 0
+				MOVE P, @P P[74]
+				MOVE P, @P P[73]
+				MOVE L, @0 P[99]
+				CAMERA_NOT_BLOCKED = 1
+				UNLOAD_FINISHED = 1
+				R_WAITING = 1
+				WAIT UNLOAD_FINISHED = 0
+				R_WAITING = 0
+			
+			ELSE					'Choosing bin placing
+				MOVE P, @P P[74]
+				MOVE L, @P P[76]
+				MOVE L, @0 P[77]
+				MOVE L, @0 P[85]
+				CALL CLOSEHAND
+				MOVE L, @0 P[77]
+				MOVE L, @P P[76]
+				MOVE L, @P P[99]
+				CAMERA_NOT_BLOCKED = 1
+				UNLOAD_FINISHED = 1
+				R_WAITING = 1
+				WAIT UNLOAD_FINISHED = 0
+				R_WAITING = 0
+
+			END IF
+
+		CASE ELSE
+
+			STOP
+
+	END SELECT
+	
+	LHOUSING_PLACED_OK = 1
+	CAMERA_NOT_BLOCKED = 1
+	SPEED 5
+
+END SUB
+
+'-----------------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART3	'Unload and reject product
+
+	PART_TO_PICK = 0
+	SPEEDMODE 3
+
+	CALL CLOSEHAND
+	CHANGETOOL 0	
+	CAMERA_NOT_BLOCKED = 1
+	SPEED 50
+	
+	CAMERA_NOT_BLOCKED = 0
+	MOVE P, @P P[60]			'Begin picking
+	MOVE L, @0 P[61]
+	CALL OPENHAND
+	MOVE L, @P P[60]
+	MOVE P, @P P[78]
+	MOVE L, @0 P[79]
+	CALL CLOSEHAND				'Drop part in reject bin
+	MOVE L, @P P[78]
+	MOVE P, @P P[99]
+	CAMERA_NOT_BLOCKED = 1
+	UNLOAD_FINISHED = 1
+	LHOUSING_PLACED_OK = 1		'Signals the end of the program for the App
+	
+END SUB	
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPART4											'Move to home position
+
+	CALL MOVE_TO_PARK
+
+END SUB
+
+	
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+SUB PICKPART0											'Dummy subroutine 
+
+	I33 = I33 + 1
+
+END SUB
+
+	
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+SUB CLOSEHAND
+
+	RESET IO[64]
+	SET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF	
+	WAIT IO[49] = ON, 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_SENSOR_CLOSED = 1
+		R_WAITING = 1
+		WAIT ERR_SENSOR_CLOSED = 0 
+		R_WAITING = 0
+		STOP
+	END IF
+
+END SUB
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+SUB OPENHAND
+
+	SET IO[64]
+	RESET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF	
+	WAIT IO[48] = ON, 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_SENSOR_OPEN = 1
+		R_WAITING = 1 
+		WAIT ERR_SENSOR_OPEN = 0 
+		R_WAITING = 0
+		STOP
+	END IF
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPARTCLOSED		'Hand sensor state should be both sensors off (open and closed) if a part is in hand
+
+	RESET IO[64]
+	SET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF
+	DELAY 250	
+	WAIT (IO[48] = OFF) AND (IO[49] = OFF), 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_PICKPART = 1
+		R_WAITING = 1
+		WAIT ERR_PICKPART = 0
+		R_WAITING = 0
+		STOP
+	END IF
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB PICKPARTOPEN	'Hand sensor state should be both sensors off (open and closed) if a part is in hand (Picking a part with an Open hand action)
+
+	RESET IO[65]
+	SET IO[64]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		EXIT SUB
+	END IF
+	DELAY 250	
+	WAIT (IO[48] = OFF) AND (IO[49] = OFF), 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_PICKPART = 1
+		R_WAITING = 1
+		WAIT ERR_PICKPART = 0
+		R_WAITING = 0
+		STOP
+	END IF
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------
+
+SUB SHORTEST_MOVE
+	
+	DEFDBL JDIST = 0
+	DEFDBL BEST_DIST = 10000
+	DEFINT BEST_FIG = 0
+	DEFINT II = 0
+	DEFINT XX = 0
+	DIM IIA(7) AS INTEGER
+	IIA(0) = 1
+	IIA(1) = 5
+	IIA(2) = 9
+	IIA(3) = 13
+	IIA(4) = 21
+	IIA(5) = 25
+	IIA(6) = 29
+	DEFINT ERRORCODE = 0
+
+	J90 = P2J(P_TEMP1)
+	FOR II = 0 TO 6
+		LETF P_TEMP2 = IIA(II)
+		J91 = P2J(P_TEMP2)
+		FOR XX = 1 TO 6
+			JDIST = JDIST + ABS(JOINT(XX, J90) - JOINT(XX, J91))
+		NEXT
+		IF JDIST < BEST_DIST THEN
+			BEST_DIST = JDIST
+			BEST_FIG = FIG(P_TEMP2)
+		END IF
+		JDIST = 0
+	NEXT
+	BESTFIG = BEST_FIG
+
+END SUB
+
+'----------------------------------------------------------------------------------------------------------------------
+
+SUB MOVE_TO_PARK
+
+	MOVING_TO_PARK = 1
+	SPEEDMODE 0
+
+	COLLISIONDETECTION FALSE, 1
+	COLLISIONDETECTION FALSE, 6
+
+	IF SKIP_COL_DETECTION = 0 THEN
+		COLLISIONDETECTION TRUE, 7
+	ELSE
+		SKIP_COL_DETECTION = 0
+	END IF
+
+	RESETAREA 0
+
+	PART_TO_PICK = 0
+	NEAREST_POINT = -1
+	SPEED 20
+	DIM CURRENTPOS AS POSITION
+	DIM CURRENT_P_VALUES AS POSITION
+	POS_CHECK_DISTANCE = MAX_POS_DIST
+
+
+	FOR TOOL_OFFSET = 0 TO 1
+		CHANGETOOL TOOL_OFFSET
+		CURRENTPOS = CURPOS
+		FOR POS_COUNTER = 11 TO 155					'Find nearest taught point from current robot position within distance of variable MAX_POS_DIST
+			CURRENT_P_VALUES = P[POS_COUNTER]
+			IF POSX(CURRENT_P_VALUES) + POSY(CURRENT_P_VALUES) + POSZ(CURRENT_P_VALUES) <> 0 THEN			'Dont check unused position variables
+				POS_DIST_TEMP = DIST(CURRENTPOS, P[POS_COUNTER])
+				IF POS_DIST_TEMP < MAX_POS_DIST THEN
+					IF POS_DIST_TEMP < POS_CHECK_DISTANCE THEN
+						POS_CHECK_DISTANCE = POS_DIST_TEMP
+						NEAREST_POINT = POS_COUNTER
+						NEAREST_POINT_TOFFSET = TOOL_OFFSET
+					END IF
+				END IF
+			END IF
+		NEXT
+	NEXT
+
+	CHANGETOOL NEAREST_POINT_TOFFSET
+
+	SELECT CASE NEAREST_POINT
+		
+		CASE 99				'Near park position
+			MOVE P, @0 P[99]
+		
+		CASE 23 TO 25		'Pick Lower Housing
+			CALL CLOSEHAND
+			MOVE P, @P P[23]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 26 TO 29		'Pick Lower Housing
+			CALL CLOSEHAND
+			MOVE P, @P P[23]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 39 TO 40
+			CALL CLOSEHAND
+			MOVE P, @P P[51]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 42 TO 50
+			CALL CLOSEHAND
+			MOVE P, @P P[52]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+			
+		CASE 51
+			CALL CLOSEHAND
+			MOVE P, @P P[51]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+			
+			CASE 52
+			CALL CLOSEHAND
+			MOVE P, @P P[52]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+			
+			CASE 53
+			CALL CLOSEHAND
+			MOVE P, @P P[53]
+			MOVE P, @P P[52]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 54
+			CALL CLOSEHAND
+			MOVE P, @P P[54]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 61
+			CALL CLOSEHAND
+			MOVE P, @P P[60]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 62 TO 63
+			CALL CLOSEHAND
+			MOVE P, @P P[62]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 64
+			CALL CLOSEHAND
+			MOVE P, @P P[63]
+			MOVE P, @P P[62]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 65
+			CALL CLOSEHAND
+			MOVE P, @P P[64]
+			MOVE P, @P P[63]
+			MOVE P, @P P[62]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 67 TO 68
+			CALL CLOSEHAND
+			MOVE P, @P P[66]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 69
+			CALL CLOSEHAND
+			MOVE P, @P P[66]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 77
+			CALL CLOSEHAND
+			MOVE P, @P P[76]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 79
+			CALL CLOSEHAND
+			MOVE P, @P P[78]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 85
+			MOVE P, @0 P[77]
+			MOVE P, @0 P[76]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 90
+			CALL CLOSEHAND
+			MOVE P, @P P[23]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+			CASE 91
+			CALL CLOSEHAND
+			MOVE P, @P P[24]
+			MOVE P, @P P[23]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 149 TO 150
+			CALL CLOSEHAND
+			MOVE P, @P P[149]
+			MOVE P, @P P[52]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 151 TO 155
+			CALL CLOSEHAND
+			MOVE P, @P P[52]
+			MOVE P, @P P[82]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+
+		CASE -1				' Not near any taught point within distance of variable MAX_POS_DIST
+			SETAREA 1
+			SETAREA 2
+			CALL OPENHAND
+			IF (IO[24] = ON) OR (IO[25] = ON) THEN			'Checking here to see if robot is in interference area 1 OR 2 (lower housing pick area).  IO24 or IO25 set to true if inside area.
+				RESETAREA 1
+				RESETAREA 2
+				SPEED 5
+				COLLISIONDETECTION FALSE, 7
+				DELAY 100
+				COLLISIONDETECTION TRUE, 6
+				MOVE P, @P P[24]
+				MOVE P, @P P[23]
+				MOVE P, @P P[82]
+				CHANGETOOL 0
+				SPEED 20
+				COLLISIONDETECTION FALSE, 6
+				DELAY 100
+				COLLISIONDETECTION TRUE, 7
+				MOVE P, @0 P[99]
+				RESETAREA 1
+			ELSE
+				RESETAREA 1
+				RESETAREA 2
+				CALL OPENHAND
+				CHANGETOOL 0
+				SPEED 5
+				MOVE P, @0 P[99]
+			END IF		
+
+		CASE ELSE
+			SETAREA 1
+			SETAREA 2
+			IF (IO[24] = ON) OR (IO[25] = ON) THEN			'Checking here to see if robot is in interference area 1 or 2 (lower housing pick area).  IO24 or IO25 set to true if inside area.
+				RESETAREA 1
+				RESETAREA 2									
+				SPEED 5
+				COLLISIONDETECTION FALSE, 7
+				DELAY 100
+				COLLISIONDETECTION TRUE, 6
+				MOVE P, @P P[24]
+				MOVE P, @P P[23]
+				MOVE P, @P P[82]
+				CHANGETOOL 0
+				SPEED 20
+				COLLISIONDETECTION FALSE, 6
+				DELAY 100
+				COLLISIONDETECTION TRUE, 7
+				MOVE P, @0 P[99]
+				RESETAREA 1
+			ELSE
+				RESETAREA 1
+				RESETAREA 2		
+				CALL OPENHAND	
+				CHANGETOOL 0
+				MOVE P, @0 P[99]
+			END IF
+			
+	END SELECT
+
+	COLLISIONDETECTION FALSE, 7
+
+	CAMERA_NOT_BLOCKED = 1
+	PARK_COMPLETE = 1
+	MOVING_TO_PARK = 0
+	R_WAITING = 1
+	WAIT PARK_COMPLETE = 0
+	R_WAITING = 0
+
+END SUB
+

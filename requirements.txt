@@ -1,0 +1,8 @@
+PySide2
+pyserial
+requests
+pymodbus
+opencv-contrib-python
+svglib
+PyInstaller
+candle-driver

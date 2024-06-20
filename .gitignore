@@ -1,0 +1,11 @@
+.idea/
+note.txt
+local_settings.py
+venv
+local_config.json
+local_pallet.json
+vision/Robot 1/Record/
+vision/Robot 2/Record/
+vision/Robot 3/Record/
+vision/Robot 4/Record/
+vision/Robot 5/Record/

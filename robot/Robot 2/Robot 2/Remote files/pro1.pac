@@ -1,0 +1,716 @@
+PROGRAM PRO1
+#INCLUDE <pacman.h>
+
+#DEFINE PART_TO_PICK I10
+#DEFINE SKIP_PRESS_PINS I11
+#DEFINE POS_COUNTER I14
+#DEFINE NEAREST_POINT I15
+#DEFINE CUR_MOTION_COMP I16
+#DEFINE SKIP_SENSOR_CHECKS I17
+#DEFINE NEAREST_POINT_TOFFSET I18
+#DEFINE TOOL_OFFSET I19
+#DEFINE SENSOR_RESPONSE_TIMEOUT I20
+#DEFINE CAMERA_NOT_BLOCKED I22
+#DEFINE MOVING_TO_PARK I25
+#DEFINE SKIP_COL_DETECTION I28
+#DEFINE PREFETCH_PART I30
+#DEFINE PREFETCH_FINISHED I31
+#DEFINE UHOUSING_PICKED I60
+#DEFINE CRANKARM_PICKED I61
+#DEFINE ROTOR_PICKED I62
+#DEFINE UHOUSING_PLACED_OK I40
+#DEFINE CRANKARM_PLACED_OK I41
+#DEFINE ROTOR_PLACED_OK I42
+#DEFINE TASK_COMPLETED I50
+#DEFINE PARK_COMPLETE I70
+#DEFINE ERR_SENSOR_CLOSED I80
+#DEFINE ERR_SENSOR_OPEN I81
+#DEFINE ERR_PICKPART I82
+#DEFINE ERR_PRESS_PINS I87
+#DEFINE BESTFIG I95
+#DEFINE MAX_POS_DIST F11
+#DEFINE POS_DIST_TEMP F12
+#DEFINE POS_CHECK_DISTANCE F13
+#DEFINE CURRENT_EXT_SPEED F14
+#DEFINE INK_JET_HEIGHT F15
+#DEFINE INK_JET_HEIGHT_ADJ F16
+#DEFINE SPDSLOW F50
+#DEFINE SPD20 F51
+#DEFINE SPD40 F52
+#DEFINE SPD60 F53
+#DEFINE SPD80 F54
+#DEFINE SPD100 F55
+#DEFINE SPDRAPID F56
+#DEFINE P_TEMP1 P198
+#DEFINE P_TEMP2 P199
+
+RESETAREA 1  'Upper Housing 
+
+RESETAREA 2	 'Handle_Asm
+
+RESETAREA 3	 'Rotor
+
+GOSUB *COL_DETECT_OFF
+
+TAKEARM
+
+IF IO[31] = OFF THEN
+	MOTOR ON
+END IF
+
+CHANGEWORK 1
+
+UHOUSING_PICKED = 0
+
+CRANKARM_PICKED = 0
+
+ROTOR_PICKED = 0
+
+UHOUSING_PLACED_OK = 0
+
+CRANKARM_PLACED_OK = 0
+
+ROTOR_PLACED_OK = 0
+
+SENSOR_RESPONSE_TIMEOUT = 0
+
+ERR_SENSOR_CLOSED = 0
+
+ERR_SENSOR_OPEN = 0
+
+ERR_PICKPART = 0
+
+ERR_PRESS_PINS = 0
+
+PARK_COMPLETE = 0
+ 
+POS_COUNTER = 0
+
+POS_DIST_TEMP = 0
+
+TASK_COMPLETED = 0
+
+CUR_MOTION_COMP = 0
+
+PREFETCH_FINISHED = 0
+
+
+
+ON PART_TO_PICK GOSUB *UPPER_HOUSING, *HANDLE_ASM, *ROTOR, *MOVE_TO_PARK			'PART_TO_PICK = 1 Pick Upper Housing, PART_TO_PICK = 2 Handle Assembly, PART_TO_PICK = 3 Pick Rotor, PART_TO_PICK = 4 Move to home position
+
+PART_TO_PICK = 0
+
+TASK_COMPLETED = 1
+
+
+END
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+*UPPER_HOUSING:      	' Pick Upper Housing
+
+	PART_TO_PICK = 0
+	ST_ASPCHANGE 3
+
+	GOSUB *OPENHAND
+	CAMERA_NOT_BLOCKED = 1
+	CHANGETOOL 1
+	SPEED 75
+	LETRZ P71 = D12						''' Transfer Cognex location values stored in D variables 10-12, 30-32, 60-62 to robot point variables
+    MOVE P, @15 P[71], NEXT
+	DEFINT COUNT = 17
+			
+    
+    LETX P10 = D10
+    LETY P10 = D11
+    LETRZ P10 = D12 
+
+    LETX P11 = D10
+    LETY P11 = D11
+    LETRZ P11 = D12
+
+    LETX P12 = D10
+    LETY P12 = D11
+    LETRZ P12 = D12
+
+	LETX P20 = D10
+    LETY P20 = D11
+    LETRZ P20 = D12
+
+	IF (INK_JET_HEIGHT_ADJ < 10.0) AND (INK_JET_HEIGHT_ADJ > -10.0) AND (INK_JET_HEIGHT < 117.0) AND (INK_JET_HEIGHT > 96) THEN
+		FOR COUNT = 17 TO 20
+			LETZ P[COUNT] = INK_JET_HEIGHT_ADJ + INK_JET_HEIGHT
+		NEXT COUNT
+	ELSE
+		STOP
+	ENDIF
+
+	CAMERA_NOT_BLOCKED = 0
+
+	ARRIVE 90
+	'GOSUB *MOTIONCOMPLETE
+
+	SETAREA 1
+
+	LETF P10 = 1
+    J10 = P2J(P10)
+    IF (JOINT(4, J10) >= 90) OR (JOINT(4, J10) <= -90) THEN
+      LETF P10 = 5
+    ENDIF
+
+	P_TEMP1 = P10
+	P_TEMP2 = P11
+	GOSUB *SHORTEST_MOVE									'Calculate the best figure for P11
+	LETF P11 = BESTFIG 
+
+	P_TEMP1 = P11
+	P_TEMP2 = P12
+	GOSUB *SHORTEST_MOVE									'Calculate the best figure for P12
+	LETF P12 = BESTFIG 
+
+	P_TEMP1 = P12
+	P_TEMP2 = P20
+	GOSUB *SHORTEST_MOVE									'Calculate the best figure for P20
+	LETF P20 = BESTFIG 
+
+
+    MOVE P, @10 P[10], NEXT
+	GOSUB *COL_DETECT_ON
+	GOSUB *MOTIONCOMPLETE
+	SPEED 40
+    MOVE P, @5 P[11], NEXT
+	GOSUB *MOTIONCOMPLETE
+    SPEED 20
+    MOVE L, @0 P[12], NEXT
+	
+	DO UNTIL CUR_MOTION_COMP = 1
+		GOSUB *VERIFY_HOUSING_PRESS_PINS
+		CALL MOTIONCOMP (CUR_MOTION_COMP)
+		DELAY 10
+	LOOP
+	
+	CUR_MOTION_COMP = 0
+	GOSUB *PICKPARTCLOSED
+	SPEED 40
+	GOSUB *COL_DETECT_OFF
+    MOVE P, @P P[11]
+    SPEED 75
+    MOVE P, @0 P[20]						'Retract to ink jet height
+
+	RESETAREA 1
+
+    MOVE P, @P P[17]				'Ink jet
+    MOVE P, @0 P[18]
+	ST_ASPCHANGE 0
+	CURRENT_EXT_SPEED = CUREXTSPD
+	EXTSPEED 100					
+	SPEED MPS (1400)
+	MOVE L, @P P[19]
+	EXTSPEED CURRENT_EXT_SPEED
+	ST_ASPCHANGE 3
+	SPEED 75
+	DECEL 20
+    MOVE P, @P P[80]
+	MOVE P, @10 P[13]
+	UHOUSING_PICKED = 1					'Announce part has been picked
+	CAMERA_NOT_BLOCKED = 1
+	IF PREFETCH_PART = 1 THEN
+		PREFETCH_FINISHED = 1
+		WAIT PREFETCH_PART = 0
+		PREFETCH_FINISHED = 0
+	END IF
+    MOVE L, @P P[14]
+	SPEED 50
+    MOVE L, @0 P[15]
+	DELAY 250
+    MOVE L, @0 P[16]
+	GOSUB *OPENHAND
+	SPEED 75
+    MOVE L, @P P[14]
+    MOVE P, @P P[13]
+	CHANGETOOL 0
+	DECEL 10
+    MOVE P, @P P[99], NEXT
+	'GOSUB *MOTIONCOMPLETE
+	ARRIVE 50
+	UHOUSING_PLACED_OK = 1		'Announce part has been placed
+	ARRIVE 98
+	CAMERA_NOT_BLOCKED = 1					
+	SPEED 5
+
+RETURN
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+*HANDLE_ASM:			    ' Pick Crank Arm
+
+	PART_TO_PICK = 0
+	ST_ASPCHANGE 3
+
+	GOSUB *OPENHAND
+	SPEED 75
+	CAMERA_NOT_BLOCKED = 1
+	CHANGETOOL 1
+	LETRZ P72 = D22
+    MOVE P, @P P[72], NEXT
+
+	LETRZ P36 = D22  
+
+    LETX P30 = D20
+    LETY P30 = D21
+    LETRZ P30 = D22 
+
+    LETX P31 = D20
+    LETY P31 = D21
+    LETRZ P31 = D22
+  
+    LETX P32 = D20
+    LETY P32 = D21
+    LETRZ P32 = D22
+
+	CAMERA_NOT_BLOCKED = 0
+	DECEL 20
+	MOVE L, @10 P[36], NEXT
+
+	ARRIVE 90
+	'GOSUB *MOTIONCOMPLETE
+
+	SETAREA 2
+
+    MOVE P, @P P[30]
+    MOVE P, @0 P[31]
+    SPEED 20
+	GOSUB *COL_DETECT_ON
+    MOVE L, @0 P[32]
+	GOSUB *PICKPARTCLOSED
+    MOVE L, @P P[31]
+	GOSUB *COL_DETECT_OFF
+	RESETAREA 2
+	SPEED 70
+	DECEL 30
+    MOVE P, @P P[72]
+	CRANKARM_PICKED = 1			'Announce part has been picked					
+    MOVE P, @P P[33]
+    MOVE P, @P P[34]
+	CAMERA_NOT_BLOCKED = 1
+    MOVE L, @E P[35]
+    MOVE L, @P P[34]
+    MOVE L, @P P[33]
+	SPEED 75
+	DECEL 10
+    MOVE P, @P P[37]
+	SPEED 75
+	DECEL 40
+    MOVE P, @P P[38]
+    MOVE L, @E P[39]
+	GOSUB *OPENHAND
+    MOVE L, @E P[40]
+    GOSUB *CLOSEHAND
+	SPEED 75
+	DECEL 30
+    MOVE L, @P P[41]
+	MOVE L, @P P[42]
+	MOVE L, @P P[43]
+    MOVE L, @P P[44]
+    MOVE L, @P P[45]
+    MOVE L, @E P[46]
+	GOSUB *PICKPARTOPEN
+    MOVE L, @0 P[44]
+	CAMERA_NOT_BLOCKED = 0
+	DECEL 10
+    MOVE P, @2 P[50]
+    MOVE L, @2 P[51]
+	SPEED 75
+	DECEL 20
+    MOVE L, @P P[52]
+	MOVE L, @P P[53]
+	MOVE L, @0 P[54]
+	GOSUB *CLOSEHAND
+    MOVE L, @P P[51]
+    MOVE L, @P P[50]
+	CHANGETOOL 0
+	SPEED 100
+	DECEL 10
+    MOVE P, @P P[99], NEXT
+	'GOSUB *MOTIONCOMPLETE
+	ARRIVE 50
+	CRANKARM_PLACED_OK = 1					'Announce part has been placed
+	ARRIVE 98
+	CAMERA_NOT_BLOCKED = 1
+	SPEED 5
+
+RETURN       
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+
+*ROTOR:								  ' Pick Rotor
+
+	PART_TO_PICK = 0
+	ST_ASPCHANGE 3
+
+	GOSUB *OPENHAND
+	SPEED 100
+	CAMERA_NOT_BLOCKED = 1
+	CHANGETOOL 1
+    MOVE P, @10 P[73], NEXT
+
+	LETX P60 = D30
+    LETY P60 = D31
+
+    LETX P61 = D30
+    LETY P61 = D31
+
+    LETX P62 = D30
+    LETY P62 = D31
+	
+	CAMERA_NOT_BLOCKED = 0
+
+	ARRIVE 90
+	'GOSUB *MOTIONCOMPLETE
+
+	SETAREA 3
+
+	LETF P61 = 1
+    J61 = P2J(P61)
+    IF (JOINT(4, J61) >= 90) OR (JOINT(4, J61) <= -90) THEN
+      LETF P61 = 5
+    ENDIF
+
+	P_TEMP1 = P61
+	P_TEMP2 = P62
+	GOSUB *SHORTEST_MOVE									'Calculate the best figure for P62
+	LETF P62 = BESTFIG 
+	
+    MOVE P, @P P[60]
+    MOVE P, @P P[61]
+    SPEED 40
+	GOSUB *COL_DETECT_ON
+	TAKEARM KEEP=1
+    MOVE P, @0 P[62]
+	GOSUB *PICKPARTCLOSED
+    MOVE P, @P P[61]
+	GOSUB *COL_DETECT_OFF
+	TAKEARM KEEP=1
+    SPEED 100
+	DECEL 50
+    MOVE P, @P P[60]
+	ROTOR_PICKED = 1					'Announce part has been picked
+
+	RESETAREA 3
+
+    MOVE P, @P P[73]
+    MOVE P, @P P[63]
+	CAMERA_NOT_BLOCKED = 1
+    MOVE P, @P P[64]
+    MOVE L, @0 P[65]
+    MOVE L, @0 P[66]
+	GOSUB *OPENHAND
+    MOVE L, @P P[65]
+    SPEED 100
+	DECEL 50
+    MOVE L, @P P[64]
+    MOVE P, @P P[63], NEXT
+	CAMERA_NOT_BLOCKED = 0
+	CHANGETOOL 0
+	DECEL 10
+    MOVE P, @P P[99], NEXT
+	'GOSUB *MOTIONCOMPLETE
+	ARRIVE 50
+	ROTOR_PLACED_OK = 1					'Announce part has been placed
+	ARRIVE 98
+	CAMERA_NOT_BLOCKED = 1
+
+	SPEED 5
+
+RETURN
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+*CLOSEHAND:
+
+	RESET IO[64]
+	SET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		RETURN
+	END IF	
+	WAIT IO[10] = ON, 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_SENSOR_CLOSED = 1 
+		WAIT ERR_SENSOR_CLOSED = 0 
+		STOP
+	END IF
+
+RETURN
+
+'------------------------------------------------------------------------------------------------------------------------------------------------
+*OPENHAND:
+
+	SET IO[64]
+	RESET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		RETURN
+	END IF	
+	WAIT IO[9] = ON, 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_SENSOR_OPEN = 1 
+		WAIT ERR_SENSOR_OPEN = 0 
+		STOP
+	END IF
+
+RETURN
+
+'----------------------------------------------------------------------------------------------------------------------
+
+*PICKPARTCLOSED:
+
+	RESET IO[64]
+	SET IO[65]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		RETURN
+	END IF
+	DELAY 250	
+	WAIT (IO[9] = OFF) AND (IO[10] = OFF), 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_PICKPART = 1
+		WAIT ERR_PICKPART = 0
+		STOP
+	END IF
+
+RETURN
+
+'----------------------------------------------------------------------------------------------------------------------
+
+*PICKPARTOPEN:
+
+	RESET IO[65]
+	SET IO[64]
+	IF (SKIP_SENSOR_CHECKS = 1) THEN
+		RETURN
+	END IF
+	DELAY 250	
+	WAIT (IO[9] = OFF) AND (IO[10] = OFF), 1000, SENSOR_RESPONSE_TIMEOUT
+	IF (SENSOR_RESPONSE_TIMEOUT = FALSE) THEN
+		ERR_PICKPART = 1
+		WAIT ERR_PICKPART = 0
+		STOP
+	END IF
+
+RETURN
+
+'----------------------------------------------------------------------------------------------------------------
+
+*MOTIONCOMPLETE:
+
+	DO UNTIL CUR_MOTION_COMP = 1
+		CALL MOTIONCOMP (CUR_MOTION_COMP)
+	LOOP
+	CUR_MOTION_COMP = 0	
+
+RETURN
+
+'----------------------------------------------------------------------------------------------------------------
+
+*VERIFY_HOUSING_PRESS_PINS:
+
+	IF (SKIP_PRESS_PINS = 1) THEN
+		RETURN
+	END IF
+	IF IO[8] = OFF THEN
+		ERR_PRESS_PINS = 1
+		WAIT ERR_PRESS_PINS = 0
+		STOP
+	END IF
+
+RETURN
+
+'----------------------------------------------------------------------------------------------------------------
+
+*COL_DETECT_ON:
+
+	  CALL SetCollisionJnt(1)
+	  CALL SetCollisionJnt(2)
+	  CALL SetCollisionJnt(3)
+	  CALL SetCollisionJnt(4)
+	  CALL SetCollisionJnt(5)
+	  CALL SetCollisionJnt(6)
+	  TAKEARM KEEP=1
+
+'----------------------------------------------------------------------------------------------------------------
+
+*COL_DETECT_OFF:
+
+	  CALL ResetCollisionJnt(1)
+	  CALL ResetCollisionJnt(2)
+	  CALL ResetCollisionJnt(3)
+	  CALL ResetCollisionJnt(4)
+	  CALL ResetCollisionJnt(5)
+	  CALL ResetCollisionJnt(6)
+	  TAKEARM KEEP=1
+'----------------------------------------------------------------------------------------------------------------
+
+*SHORTEST_MOVE:
+	
+	DEFDBL JDIST = 0
+	DEFDBL BEST_DIST = 10000
+	DEFINT BEST_FIG = 0
+	DEFINT II = 0
+	DEFINT XX = 0
+	DIM IIA% (7)
+	IIA(0) = 1
+	IIA(1) = 5
+	IIA(2) = 9
+	IIA(3) = 13
+	IIA(4) = 21
+	IIA(5) = 25
+	IIA(6) = 29
+	DEFINT ERRORCODE = 0
+
+	J90 = P2J(P_TEMP1)
+	FOR II = 0 TO 6
+		LETF P_TEMP2 = IIA(II)
+		J91 = P2J(P_TEMP2, ERRORCODE)	'RC7 REQUIRES A SECOND ARGUMENT FOR P2J FOR ANY ERRORS PRODUCED
+		FOR XX = 1 TO 6
+			JDIST = JDIST + ABS(JOINT(XX, J90) - JOINT(XX, J91))
+		NEXT
+		IF JDIST < BEST_DIST THEN
+			BEST_DIST = JDIST
+			BEST_FIG = FIG(P_TEMP2)
+		END IF
+		JDIST = 0
+	NEXT
+	BESTFIG = BEST_FIG
+RETURN
+
+'----------------------------------------------------------------------------------------------------------------
+
+*MOVE_TO_PARK:
+
+	ST_ASPCHANGE 0
+  IF SKIP_COL_DETECTION = 0 THEN
+  	GOSUB *COL_DETECT_ON
+	TAKEARM KEEP=1
+  ELSE
+  	SKIP_COL_DETECTION = 0	
+  END IF
+
+	MOVING_TO_PARK = 1
+	PREFETCH_PART = 0
+
+	RESETAREA 1
+	RESETAREA 2
+	RESETAREA 3
+
+	PART_TO_PICK = 0
+	NEAREST_POINT = -1
+	SPEED 20
+	DIM CURRENTPOS AS POSITION
+	DIM CURRENT_P_VALUES AS POSITION
+	POS_CHECK_DISTANCE = MAX_POS_DIST
+
+
+	FOR TOOL_OFFSET = 0 TO 1
+		CHANGETOOL TOOL_OFFSET
+		FOR POS_COUNTER = 10 TO 89								'Find nearest taught point from current robot position within distance of variable MAX_POS_DIST
+			CURRENT_P_VALUES = P[POS_COUNTER]
+			IF POSX(CURRENT_P_VALUES) + POSY(CURRENT_P_VALUES) + POSZ(CURRENT_P_VALUES) <> 0 THEN			'Dont check unused position variables
+				POS_DIST_TEMP = DIST(CURPOS, P[POS_COUNTER])
+				IF POS_DIST_TEMP < MAX_POS_DIST THEN
+					IF POS_DIST_TEMP < POS_CHECK_DISTANCE THEN
+						POS_CHECK_DISTANCE = POS_DIST_TEMP
+						NEAREST_POINT = POS_COUNTER
+						NEAREST_POINT_TOFFSET = TOOL_OFFSET
+					END IF
+				END IF
+			END IF
+		 NEXT
+	NEXT
+
+	CHANGETOOL NEAREST_POINT_TOFFSET
+
+	SELECT CASE NEAREST_POINT
+		
+		CASE 99				'Near park position
+			MOVE P, @0 P[99]
+		
+		CASE 10 TO 12		'Picking Upper Housing Position
+			GOSUB *OPENHAND
+			MOVE P, @P P[71]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 13 TO 16		'Placing Upper Housing
+			GOSUB *OPENHAND
+			MOVE L, @0 P[13]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 17 TO 20		'Ink Jet Locations
+			GOSUB *OPENHAND
+			MOVE L, @0 P[17]
+			MOVE P, @0 P[71]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 30 TO 32		'Picking Crank Arm
+			GOSUB *OPENHAND
+			MOVE L, @0 P[72]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 34 TO 35		'Press Crank Arm onto Handle
+			GOSUB *OPENHAND
+			MOVE L, @0 P[33]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 38 TO 41		'Insert Crank Arm Assm into fixture
+			GOSUB *OPENHAND
+			MOVE L, @0 P[40]
+			MOVE P, @P P[37]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+	
+		CASE 45 TO 46		'Pulling Crank Arm Assm from fixture 
+			GOSUB *CLOSEHAND
+			MOVE L, @0 P[44]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 51 TO 54		'Inserting Crank Arm Assm into Whirl
+			GOSUB *CLOSEHAND
+			MOVE L, @0 P[51]
+			MOVE L, @0 P[50]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 60 TO 62		'Pick Rotor
+			GOSUB *OPENHAND
+			MOVE P, @0 P[73]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE 65 TO 66		'Placing rotor
+			GOSUB *OPENHAND
+			MOVE L, @0 P[64]
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+
+		CASE -1				' Not near any taught point within distance of variable MAX_POS_DIST
+			GOSUB *OPENHAND
+			CHANGETOOL 0
+			SPEED 5
+			MOVE P, @0 P[99]
+		
+		CASE ELSE			'Points that can reach park directly
+			GOSUB *OPENHAND
+			CHANGETOOL 0
+			MOVE P, @0 P[99]
+			
+	END SELECT
+
+	CAMERA_NOT_BLOCKED = 1
+	PARK_COMPLETE = 1
+	MOVING_TO_PARK = 0
+	WAIT PARK_COMPLETE = 0
+RETURN
+
